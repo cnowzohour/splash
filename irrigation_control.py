@@ -5,12 +5,13 @@ import time
 import schedule
 
 
+base_folder = "splash_data"
 SAMPLING_RATE_S = 60
-IRRIGATION_CONTROL_MIN_RATE_H = 6
+IRRIGATION_CONTROL_MIN_RATE_H = 3
 # IRRIGATION_CONTROL_MIN_RATE_H = 0.1
 IRRIGATION_CONTROL_MAX_RATE_H = 48
-MIN_MOISTURE_THRESHOLD = 270
-VALVE_DURATION_S = 60
+MIN_MOISTURE_THRESHOLD = 400
+VALVE_DURATION_S = 1800
 WET_MODE = True
 ML_PER_S = 50.0 / 120.0
 START_WITH_IRRIGATION = False
@@ -78,10 +79,10 @@ sensor = chirp_modbus.SoilMoistureSensor(address=1, serialport='/dev/ttyUSB0')
 
 
 date_str = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-fname_readings = date_str + ".csv"
+fname_readings = base_folder + "/" + date_str + ".csv"
 with open(fname_readings, 'w') as f:
     f.write('datetime,ts,moisture,temperature\n')
-fname_log = date_str + ".log"
+fname_log = base_folder + "/" + date_str + ".log"
 with open(fname_log, 'w') as f:
     f.write('Log\n')
 
@@ -93,3 +94,4 @@ if START_WITH_IRRIGATION:
 while True:
     schedule.run_pending()
     time.sleep(1)
+

@@ -1,11 +1,22 @@
 library(shiny)
 library(readr)
+library(dplyr)
 library(plotly)
 
 basePathMac <- "~/Downloads"
 basePathPi <- "/home/pi"
 basePath <- if (dir.exists(basePathPi)) basePathPi else basePathMac
-defaultFile <- "2019-05-29_202306"
+
+readData <- function() {
+  dat <- bind_rows(lapply(list.files(file.path(basePath, "splash_data"), "*.csv", full.names = T), read_csv))
+  log <- unlist(lapply(list.files(file.path(basePath, "splash_data"), "*.log", full.names = T), function(path) {
+    f <- file(path, "r")
+    log <- readLines(f)
+    close(f)
+    log
+  }))
+  list(dat = dat, log = log)
+}
 
 ui <- fluidPage(
   tags$head(
@@ -22,10 +33,9 @@ ui <- fluidPage(
 
 server <- function(input, output) {
   output$plot <- renderPlotly({
-    dat <- read_csv(file.path(basePath, paste0(defaultFile, ".csv")))
-    f <- file(file.path(basePath, paste0(defaultFile, ".log")), "r")
-    log <- readLines(f)
-    close(f)
+    data <- readData()
+    dat <- data$dat
+    log <- data$log
     logLinesIrrigationControl <- Filter(function(line) grepl("Irrigation control", line), log)
     logLinesTimeThreshold <- Filter(function(line) grepl("IRRIGATION_CONTROL_MAX_RATE_H", line), log)
     logLinesMoistureThreshold <- Filter(function(line) grepl("MIN_MOISTURE_THRESHOLD", line), log)
@@ -53,7 +63,6 @@ server <- function(input, output) {
       add_trace(x = ~datetime, y = ~moisture, name = "Moisture") %>%
       add_trace(x = ~datetime, y = ~temperature, name = "Temperature", yaxis = "y2") %>%
       layout(
-        title = defaultFile,
         yaxis2 = y2,
         yaxis = list(title = "Moisture"),
         xaxis = list(title = "Time", range = c((as.numeric(Sys.time()) - 7 * 24 * 3600) * 1000L, as.numeric(Sys.time()) * 1000L)),
