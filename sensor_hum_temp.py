@@ -51,7 +51,7 @@ def get_sensor_readings():
 
 def query_and_update_db():
 	data = get_sensor_readings()
-	insert_into_db(data.temperature, data.moisture)
+	insert_into_db(data['temperature'], data['moisture'])
 
 
 schedule.every(SAMPLING_RATE_S).seconds.do(query_and_update_db)
