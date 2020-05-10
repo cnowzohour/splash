@@ -8,7 +8,7 @@ import time
 
 
 SENSOR_NAME = "soil1"
-SAMPLING_RATE_S = 60
+SAMPLING_RATE_S = 5
 
 
 client = InfluxDBClient('localhost', 8086, 'admin', 'aY3V2LvFji', 'soil_sensors')
@@ -22,7 +22,7 @@ def insert_into_db(temp, moisture):
         {
             "measurement": "temperature",
             "tags": {
-	            "sensor": sensor_name,
+	            "sensor": SENSOR_NAME,
     	    },
             "fields": {
                 "value": temp
@@ -31,7 +31,7 @@ def insert_into_db(temp, moisture):
         {
             "measurement": "moisture",
             "tags": {
-	            "sensor": sensor_name,
+	            "sensor": SENSOR_NAME,
     	    },
             "fields": {
                 "value": moisture
