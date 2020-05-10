@@ -8,7 +8,7 @@ import time
 
 
 SENSOR_NAME = "soil1"
-SAMPLING_RATE_S = 5
+SAMPLING_RATE_S = 60
 
 
 client = InfluxDBClient('localhost', 8086, 'admin', 'aY3V2LvFji', 'soil_sensors')
