@@ -13,6 +13,8 @@ SAMPLING_RATE_S = 60
 
 client = InfluxDBClient('localhost', 8086, 'admin', 'aY3V2LvFji', 'soil_sensors')
 sensor = chirp_modbus.SoilMoistureSensor(address=1, serialport='/dev/ttyUSB0')
+logging.basicConfig(level=logging.NOTSET, format='%(asctime)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+logger = logging.getLogger("sensor_hum_temp.py")
 
 
 def insert_into_db(temp, moisture):
@@ -43,6 +45,7 @@ def get_sensor_readings():
     moisture = sensor.getMoisture()
     temperature = sensor.getTemperature()
     ts = int(time.time())
+    logger.info("Temperature: {} / Moisture: {}".format(temperature, moisture))
     return {"ts": ts, "moisture": moisture, "temperature": temperature}
 
 
