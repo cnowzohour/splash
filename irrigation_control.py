@@ -38,7 +38,7 @@ def update_db_0():
 
 def get_last_moisture():
 	result = client.query('SELECT last(value) FROM moisture')
-	list(result.get_points())[0]['last']
+	return list(result.get_points())[0]['last']
 
 def irrigate(seconds):
 	global last_irrigation_ts
