@@ -1,95 +1,75 @@
-from gpiozero import LED
-import chirp_modbus
-from datetime import datetime
+#!/usr/bin/python3
+
+import os
+from influxdb import InfluxDBClient
+import logging
 import time
 import schedule
 
 
-base_folder = "splash_data"
-SAMPLING_RATE_S = 60
+MIN_MOISTURE_THRESHOLD = 320
+VALVE_DURATION_S = 180
 IRRIGATION_CONTROL_MIN_RATE_H = 3
-# IRRIGATION_CONTROL_MIN_RATE_H = 0.1
-IRRIGATION_CONTROL_MAX_RATE_H = 48
-MIN_MOISTURE_THRESHOLD = 400
-VALVE_DURATION_S = 1800
-WET_MODE = True
-ML_PER_S = 50.0 / 120.0
+IRRIGATION_CONTROL_MAX_RATE_H = 96
 START_WITH_IRRIGATION = False
+DB_UPDATE_INTERVAL_S = 180
 
+client = InfluxDBClient('localhost', 8086, 'admin', 'aY3V2LvFji', 'soil_sensors')
+logging.basicConfig(level=logging.NOTSET, format='%(asctime)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+logger = logging.getLogger("irrigation_control")
 
 last_irrigation_ts = int(time.time())
 
+def update_irrigation_db(value):
+    json_body = [
+        {
+            "measurement": "irrigation",
+            "tags": {
+    	    },
+            "fields": {
+                "value": value
+            }
+        }
+    ]
+    client.write_points(json_body)
 
-def get_sensor_readings():
-    moisture = sensor.getMoisture()
-    temperature = sensor.getTemperature()
-    ts = int(time.time())
-    return {"ts": ts, "moisture": moisture, "temperature": temperature}
+def update_db_0():
+	update_irrigation_db(0)
 
-def ts_to_timestr(ts):
-    return str(datetime.utcfromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S'))
+def get_last_moisture():
+	result = client.query('SELECT last(value) FROM moisture')
+	list(result.get_points())[0]['last']
 
-def write_line(line, fname):
-    with open(fname, 'a') as f:
-        f.write(line + '\n')
-
-def write_sensor_readings():
-    readings = get_sensor_readings()
-    print(readings)
-    write_line(
-      ts_to_timestr(readings['ts']) + ',' + str(readings['ts']) + ',' + str(readings['moisture']) + ',' + str(readings['temperature']) + '\n',
-      fname_readings
-    )
-
-def log(msg):
-    line = ts_to_timestr(int(time.time())) + " " + msg
-    print(line)
-    write_line(line, fname_log)
-
-def irrigate(duration_s):
+def irrigate(seconds):
     global last_irrigation_ts
-    log("Turning valve on")
-    if WET_MODE:
-        valve.on()
-    time.sleep(duration_s)
-    if WET_MODE:
-        valve.off()
-    log("Turning valve off")
+	logger.info("Starting irrigation")
+	update_irrigation_db(1)
+	os.system("./on.sh")
+	time.sleep(seconds)
+	logger.info("Stopping irrigation")
+	update_irrigation_db(1)
+	os.system("./off.sh")
     last_irrigation_ts = int(time.time())
 
 def irrigation_control():
     log("Irrigation control")
-    readings = get_sensor_readings()
-    log("Sensor readings: " + str(readings))
+    moisture = get_last_moisture()
+    current_ts = int(time.time())
+    log("Last soil moisture: " + str(moisture))
     log("last_irrigation_ts: " + str(last_irrigation_ts))
-    if (readings['ts'] - last_irrigation_ts >= IRRIGATION_CONTROL_MAX_RATE_H * 3600):
+    if (current_ts - last_irrigation_ts >= IRRIGATION_CONTROL_MAX_RATE_H * 3600):
         log("IRRIGATION_CONTROL_MAX_RATE_H exceeded")
         irrigate(VALVE_DURATION_S)
-    if (readings['moisture'] <= MIN_MOISTURE_THRESHOLD):
+    if (moisture <= MIN_MOISTURE_THRESHOLD):
         log("MIN_MOISTURE_THRESHOLD exceeded")
         irrigate(VALVE_DURATION_S)
 
 
-schedule.every(SAMPLING_RATE_S).seconds.do(write_sensor_readings)
 schedule.every(IRRIGATION_CONTROL_MIN_RATE_H).hours.do(irrigation_control)
-
-
-valve = LED(21)
-sensor = chirp_modbus.SoilMoistureSensor(address=1, serialport='/dev/ttyUSB0')
-
-
-date_str = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-fname_readings = base_folder + "/" + date_str + ".csv"
-with open(fname_readings, 'w') as f:
-    f.write('datetime,ts,moisture,temperature\n')
-fname_log = base_folder + "/" + date_str + ".log"
-with open(fname_log, 'w') as f:
-    f.write('Log\n')
-
+schedule.every(DB_UPDATE_INTERVAL_S).seconds.do(update_db_0)
 
 if START_WITH_IRRIGATION:
     schedule.run_all()
-
 
 while True:
     schedule.run_pending()
