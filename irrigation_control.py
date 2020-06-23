@@ -52,16 +52,16 @@ def irrigate(seconds):
 	last_irrigation_ts = int(time.time())
 
 def irrigation_control():
-	log("Irrigation control")
+	logger.info("Irrigation control")
 	moisture = get_last_moisture()
 	current_ts = int(time.time())
-	log("Last soil moisture: " + str(moisture))
-	log("last_irrigation_ts: " + str(last_irrigation_ts))
+	logger.info("Last soil moisture: " + str(moisture))
+	logger.info("last_irrigation_ts: " + str(last_irrigation_ts))
 	if (current_ts - last_irrigation_ts >= IRRIGATION_CONTROL_MAX_RATE_H * 3600):
-		log("IRRIGATION_CONTROL_MAX_RATE_H exceeded")
+		logger.info("IRRIGATION_CONTROL_MAX_RATE_H exceeded")
 		irrigate(VALVE_DURATION_S)
 	if (moisture <= MIN_MOISTURE_THRESHOLD):
-		log("MIN_MOISTURE_THRESHOLD exceeded")
+		logger.info("MIN_MOISTURE_THRESHOLD exceeded")
 		irrigate(VALVE_DURATION_S)
 
 
